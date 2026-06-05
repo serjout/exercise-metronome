@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Метроном для упражнений</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f4ee;
+      --ink: #18211f;
+      --muted: #65706c;
+      --line: #d9d4c8;
+      --panel: #fffdf8;
+      --green: #138a4d;
+      --green-soft: #dff4e8;
+      --blue: #176ec9;
+      --blue-soft: #e1eefc;
+      --red: #b1332f;
+      --shadow: 0 18px 42px rgba(31, 43, 38, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(246, 244, 238, 0.9)),
+        var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(270px, 360px) 1fr;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    .settings {
+      align-self: stretch;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .pill {
+      min-width: 74px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      padding: 6px 10px;
+      text-align: center;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .value {
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      font-weight: 750;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #2c7a62;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 10px;
+    }
+
+    .compact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .button {
+      min-height: 48px;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 800;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    .button:active {
+      transform: translateY(1px);
+    }
+
+    .primary {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .secondary {
+      background: #ebe7dc;
+      color: var(--ink);
+    }
+
+    .button:hover {
+      filter: brightness(0.97);
+    }
+
+    .stage {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      background: rgba(255, 253, 248, 0.78);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      min-height: 72px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: clamp(20px, 3vw, 34px);
+      font-weight: 850;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cue-wrap {
+      min-height: 430px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .cue-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, var(--cue-soft, #efede6), transparent 66%);
+      opacity: 0.86;
+      transform: scale(0.88);
+      transition: background 160ms ease, transform 160ms ease;
+    }
+
+    .cue-wrap.pulse::before {
+      transform: scale(1);
+    }
+
+    .cue {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .cue-word {
+      color: var(--cue-color, var(--ink));
+      font-size: clamp(54px, 12vw, 156px);
+      font-weight: 950;
+      letter-spacing: 0;
+      line-height: 0.92;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      opacity: 0;
+      transform: scale(0.96);
+      transition: opacity 90ms ease, transform 90ms ease;
+    }
+
+    .cue-word.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .cue-sub {
+      color: var(--muted);
+      font-size: clamp(18px, 3vw, 28px);
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress {
+      display: grid;
+      grid-template-columns: repeat(var(--dots, 7), minmax(14px, 1fr));
+      gap: 8px;
+    }
+
+    .dot {
+      height: 14px;
+      border-radius: 999px;
+      background: #ddd8cc;
+      transition: background 120ms ease, transform 120ms ease;
+    }
+
+    .dot.active {
+      background: var(--cue-color, var(--ink));
+      transform: translateY(-2px);
+    }
+
+    .dot.done {
+      background: #a8b8af;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      margin: 0;
+    }
+
+    .paused .cue-word {
+      color: var(--red);
+    }
+
+    @media (max-width: 860px) {
+      .app {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+
+      .settings {
+        order: 2;
+      }
+
+      .stage {
+        order: 1;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .cue-wrap {
+        min-height: 48vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="settings" aria-label="Настройки метронома">
+      <div class="brand">
+        <h1>Метроном</h1>
+        <span class="pill" id="status">готов</span>
+      </div>
+
+      <div class="field">
+        <div class="field-row">
+          <label for="bpm">BPM</label>
+          <span class="value" id="bpmValue">60</span>
+        </div>
+        <input id="bpm" type="range" min="30" max="180" step="1" value="60">
+      </div>
+
+      <div class="compact-grid">
+        <div class="field">
+          <label for="bars">Тактов до глотания</label>
+          <input id="bars" type="number" min="1" max="32" step="1" value="7">
+        </div>
+        <div class="field">
+          <label for="minutes">Минут</label>
+          <input id="minutes" type="number" min="1" max="60" step="1" value="7">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="pauseAdd">Добавить секунд при пробеле</label>
+        <input id="pauseAdd" type="number" min="0" max="120" step="1" value="7">
+      </div>
+
+      <div class="actions">
+        <button class="button primary" id="start" type="button" aria-label="Старт или пауза">▶ Старт</button>
+        <button class="button secondary" id="reset" type="button" aria-label="Сброс">↺ Сброс</button>
+      </div>
+
+      <p class="hint">Пробел ставит на паузу или продолжает. На паузе таймер увеличивается на заданные секунды; после продолжения цикл идет заново: 1…N, затем «глотаем».</p>
+    </section>
+
+    <section class="stage" aria-live="polite">
+      <div class="topbar">
+        <div class="stat">
+          <span class="stat-label">Осталось</span>
+          <span class="stat-value" id="timeLeft">07:00</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Такт</span>
+          <span class="stat-value" id="beatNow">1 / 8</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Следующий щелчок</span>
+          <span class="stat-value" id="nextClick">1.0 c</span>
+        </div>
+      </div>
+
+      <div class="cue-wrap" id="cueWrap">
+        <div class="cue">
+          <div class="cue-word" id="cueWord">сжимаем</div>
+          <div class="cue-sub" id="cueSub">нажмите старт</div>
+        </div>
+      </div>
+
+      <div class="progress" id="progress" aria-label="Прогресс цикла"></div>
+    </section>
+  </main>
+
+  <script>
+    const els = {
+      bpm: document.querySelector("#bpm"),
+      bpmValue: document.querySelector("#bpmValue"),
+      bars: document.querySelector("#bars"),
+      minutes: document.querySelector("#minutes"),
+      pauseAdd: document.querySelector("#pauseAdd"),
+      start: document.querySelector("#start"),
+      reset: document.querySelector("#reset"),
+      status: document.querySelector("#status"),
+      timeLeft: document.querySelector("#timeLeft"),
+      beatNow: document.querySelector("#beatNow"),
+      nextClick: document.querySelector("#nextClick"),
+      cueWrap: document.querySelector("#cueWrap"),
+      cueWord: document.querySelector("#cueWord"),
+      cueSub: document.querySelector("#cueSub"),
+      progress: document.querySelector("#progress"),
+    };
+
+    const state = {
+      running: false,
+      paused: false,
+      durationMs: 7 * 60 * 1000,
+      remainingMs: 7 * 60 * 1000,
+      beatIndex: 0,
+      currentBeatIndex: -1,
+      nextBeatAt: 0,
+      lastTickAt: 0,
+      raf: 0,
+      hideCueTimer: 0,
+      audio: null,
+    };
+
+    function numberFrom(input, fallback) {
+      const value = Number.parseInt(input.value, 10);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function settings() {
+      return {
+        bpm: Math.max(30, Math.min(180, numberFrom(els.bpm, 60))),
+        bars: Math.max(1, Math.min(32, numberFrom(els.bars, 7))),
+        minutes: Math.max(1, Math.min(60, numberFrom(els.minutes, 7))),
+        pauseAdd: Math.max(0, Math.min(120, numberFrom(els.pauseAdd, 7))),
+      };
+    }
+
+    function formatTime(ms) {
+      const total = Math.max(0, Math.ceil(ms / 1000));
+      const minutes = Math.floor(total / 60).toString().padStart(2, "0");
+      const seconds = (total % 60).toString().padStart(2, "0");
+      return `${minutes}:${seconds}`;
+    }
+
+    function ensureAudio() {
+      if (!state.audio) {
+        state.audio = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (state.audio.state === "suspended") {
+        state.audio.resume();
+      }
+      return state.audio;
+    }
+
+    function clickSound(kind) {
+      const audio = ensureAudio();
+      const now = audio.currentTime;
+
+      function tone(offset, frequency, volume, duration) {
+        const start = now + offset;
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        const filter = audio.createBiquadFilter();
+
+        osc.type = kind === "swallow" ? "triangle" : "sine";
+        osc.frequency.setValueAtTime(frequency, start);
+        filter.type = "highpass";
+        filter.frequency.setValueAtTime(kind === "swallow" ? 420 : 220, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.006);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audio.destination);
+        osc.start(start);
+        osc.stop(start + duration + 0.02);
+      }
+
+      if (kind === "swallow") {
+        tone(0, 1040, 0.28, 0.11);
+        tone(0.12, 1380, 0.22, 0.1);
+      } else {
+        tone(0, 460, 0.15, 0.07);
+      }
+    }
+
+    function setCue(kind) {
+      const isSwallow = kind === "swallow";
+      els.cueWord.textContent = isSwallow ? "глотаем" : "сжимаем";
+      els.cueWord.classList.add("visible");
+      els.cueWrap.style.setProperty("--cue-color", isSwallow ? "var(--blue)" : "var(--green)");
+      els.cueWrap.style.setProperty("--cue-soft", isSwallow ? "var(--blue-soft)" : "var(--green-soft)");
+      els.cueWrap.classList.remove("pulse");
+      void els.cueWrap.offsetWidth;
+      els.cueWrap.classList.add("pulse");
+      window.setTimeout(() => els.cueWrap.classList.remove("pulse"), 130);
+      window.clearTimeout(state.hideCueTimer);
+      state.hideCueTimer = window.setTimeout(() => {
+        if (state.running && !state.paused) {
+          els.cueWord.classList.remove("visible");
+          state.currentBeatIndex = -1;
+          render();
+        }
+      }, 320);
+    }
+
+    function hideCue() {
+      window.clearTimeout(state.hideCueTimer);
+      els.cueWord.classList.remove("visible");
+      state.currentBeatIndex = -1;
+    }
+
+    function renderProgress() {
+      const { bars } = settings();
+      const total = bars + 1;
+      els.progress.style.setProperty("--dots", total);
+      els.progress.innerHTML = "";
+      for (let i = 0; i < total; i += 1) {
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        if (state.currentBeatIndex >= 0 && i < state.currentBeatIndex) dot.classList.add("done");
+        if (i === state.currentBeatIndex) dot.classList.add("active");
+        els.progress.appendChild(dot);
+      }
+    }
+
+    function render() {
+      const { bars, bpm } = settings();
+      const total = bars + 1;
+      const secondsToBeat = state.running && !state.paused
+        ? Math.max(0, (state.nextBeatAt - performance.now()) / 1000)
+        : 60 / bpm;
+
+      els.bpmValue.textContent = bpm;
+      els.timeLeft.textContent = formatTime(state.remainingMs);
+      const displayedBeat = state.currentBeatIndex >= 0 ? state.currentBeatIndex + 1 : state.beatIndex + 1;
+      els.beatNow.textContent = `${Math.min(displayedBeat, total)} / ${total}`;
+      els.nextClick.textContent = `${secondsToBeat.toFixed(1)} c`;
+      els.status.textContent = state.paused ? "пауза" : state.running ? "идет" : "готов";
+      els.start.textContent = state.running && !state.paused ? "⏸ Пауза" : "▶ Старт";
+      document.body.classList.toggle("paused", state.paused);
+      els.cueSub.textContent = state.paused
+        ? "пауза"
+        : state.running
+          ? `цикл ${Math.min(displayedBeat, total)} из ${total}`
+          : "нажмите старт";
+      renderProgress();
+    }
+
+    function resetCycle() {
+      state.beatIndex = 0;
+      hideCue();
+    }
+
+    function scheduleFromNow() {
+      state.lastTickAt = performance.now();
+      state.nextBeatAt = state.lastTickAt;
+    }
+
+    function beat() {
+      const { bars } = settings();
+      const kind = state.beatIndex >= bars ? "swallow" : "squeeze";
+      state.currentBeatIndex = state.beatIndex;
+      setCue(kind);
+      clickSound(kind);
+      state.beatIndex = (state.beatIndex + 1) % (bars + 1);
+    }
+
+    function loop(now) {
+      if (!state.running || state.paused) return;
+
+      const delta = now - state.lastTickAt;
+      state.lastTickAt = now;
+      state.remainingMs = Math.max(0, state.remainingMs - delta);
+
+      const interval = 60000 / settings().bpm;
+      while (now >= state.nextBeatAt && state.running && !state.paused) {
+        beat();
+        state.nextBeatAt += interval;
+      }
+
+      if (state.remainingMs <= 0) {
+        state.running = false;
+        state.paused = false;
+        els.cueWord.textContent = "готово";
+        els.cueWord.classList.add("visible");
+        els.cueWrap.style.setProperty("--cue-color", "var(--ink)");
+        els.cueWrap.style.setProperty("--cue-soft", "#efede6");
+        render();
+        return;
+      }
+
+      render();
+      state.raf = requestAnimationFrame(loop);
+    }
+
+    function start() {
+      const { minutes } = settings();
+      if (!state.running) {
+        state.durationMs = minutes * 60 * 1000;
+        state.remainingMs = state.remainingMs > 0 && state.remainingMs !== state.durationMs
+          ? state.remainingMs
+          : state.durationMs;
+        state.running = true;
+        state.paused = false;
+        resetCycle();
+        scheduleFromNow();
+        state.raf = requestAnimationFrame(loop);
+        return;
+      }
+
+      if (state.paused) {
+        state.paused = false;
+        resetCycle();
+        scheduleFromNow();
+        state.raf = requestAnimationFrame(loop);
+      } else {
+        state.remainingMs += settings().pauseAdd * 1000;
+        state.paused = true;
+        resetCycle();
+        cancelAnimationFrame(state.raf);
+      }
+      render();
+    }
+
+    function reset() {
+      cancelAnimationFrame(state.raf);
+      const { minutes } = settings();
+      state.running = false;
+      state.paused = false;
+      state.durationMs = minutes * 60 * 1000;
+      state.remainingMs = state.durationMs;
+      state.beatIndex = 0;
+      els.cueWord.textContent = "сжимаем";
+      hideCue();
+      els.cueWrap.style.setProperty("--cue-color", "var(--green)");
+      els.cueWrap.style.setProperty("--cue-soft", "var(--green-soft)");
+      render();
+    }
+
+    els.start.addEventListener("click", start);
+    els.reset.addEventListener("click", reset);
+
+    [els.bpm, els.bars, els.minutes, els.pauseAdd].forEach((input) => {
+      input.addEventListener("input", () => {
+        if (!state.running) {
+          reset();
+        } else {
+          render();
+        }
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const tag = document.activeElement?.tagName;
+      const isEditing = tag === "INPUT" || tag === "TEXTAREA";
+      if (event.code === "Space" && !isEditing) {
+        event.preventDefault();
+        start();
+      }
+    });
+
+    reset();
+  </script>
+</body>
+</html>
