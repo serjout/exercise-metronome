@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Метроном">
+  <rect width="512" height="512" rx="96" fill="#18211f"/>
+  <path d="M256 70 398 430H114L256 70Z" fill="#fffdf8"/>
+  <path d="M256 118 348 390H164l92-272Z" fill="#dff4e8"/>
+  <path d="M256 86v322" stroke="#18211f" stroke-width="24" stroke-linecap="round"/>
+  <path d="m256 250 78-58" stroke="#176ec9" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="256" cy="250" r="30" fill="#138a4d"/>
+  <path d="M190 430h132" stroke="#18211f" stroke-width="28" stroke-linecap="round"/>
+</svg>

@@ -3,7 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#18211f">
+  <meta name="application-name" content="Метроном">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Метроном">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Метроном для упражнений</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <style>
     :root {
       color-scheme: light;
@@ -88,6 +95,12 @@
       text-align: center;
       font-size: 13px;
       white-space: nowrap;
+    }
+
+    .pill.offline {
+      border-color: #d9b8b6;
+      color: var(--red);
+      background: #fff0ef;
     }
 
     .field {
@@ -685,7 +698,9 @@
       const displayedBeat = state.currentBeatIndex >= 0 ? state.currentBeatIndex + 1 : state.beatIndex + 1;
       els.beatNow.textContent = `${Math.min(displayedBeat, total)} / ${total}`;
       els.nextClick.textContent = `${secondsToBeat.toFixed(1)} c`;
-      els.status.textContent = state.paused ? "пауза" : state.running ? "идет" : "готов";
+      const isOffline = !navigator.onLine;
+      els.status.textContent = isOffline ? "оффлайн" : state.paused ? "пауза" : state.running ? "идет" : "готов";
+      els.status.classList.toggle("offline", isOffline);
       els.start.textContent = state.running && !state.paused ? "⏸ Пауза" : "▶ Старт";
       document.body.classList.toggle("paused", state.paused);
       els.cueSub.textContent = state.paused
@@ -816,6 +831,25 @@
     });
 
     reset();
+
+    function updateNetworkStatus() {
+      render();
+    }
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").then(() => {
+          if (!navigator.serviceWorker.controller && !sessionStorage.getItem("sw-reload")) {
+            sessionStorage.setItem("sw-reload", "1");
+            window.location.reload();
+          }
+        }).catch(() => {});
+      });
+    }
+
+    window.addEventListener("online", updateNetworkStatus);
+    window.addEventListener("offline", updateNetworkStatus);
+    updateNetworkStatus();
   </script>
 </body>
 </html>
