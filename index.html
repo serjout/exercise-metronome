@@ -247,7 +247,7 @@
       transform: scale(1);
     }
 
-    .fireworks {
+    .magic {
       position: fixed;
       inset: 0;
       width: 100vw;
@@ -406,7 +406,7 @@
       </div>
 
       <div class="cue-wrap" id="cueWrap">
-        <canvas class="fireworks" id="fireworks" aria-hidden="true"></canvas>
+        <canvas class="magic" id="magic" aria-hidden="true"></canvas>
         <div class="cue">
           <div class="cue-word" id="cueWord">сжимаем</div>
           <div class="cue-sub" id="cueSub">нажмите старт</div>
@@ -434,7 +434,7 @@
       cueWord: document.querySelector("#cueWord"),
       cueSub: document.querySelector("#cueSub"),
       progress: document.querySelector("#progress"),
-      fireworks: document.querySelector("#fireworks"),
+      magic: document.querySelector("#magic"),
     };
 
     const state = {
@@ -448,8 +448,8 @@
       lastTickAt: 0,
       raf: 0,
       hideCueTimer: 0,
-      fireworksRaf: 0,
-      fireworksEndAt: 0,
+      magicRaf: 0,
+      magicEndAt: 0,
       audio: null,
     };
 
@@ -543,82 +543,194 @@
       state.currentBeatIndex = -1;
     }
 
-    function stopFireworks() {
-      cancelAnimationFrame(state.fireworksRaf);
-      state.fireworksRaf = 0;
-      state.fireworksEndAt = 0;
-      const context = els.fireworks.getContext("2d");
-      context.clearRect(0, 0, els.fireworks.width, els.fireworks.height);
+    function stopMagic() {
+      cancelAnimationFrame(state.magicRaf);
+      state.magicRaf = 0;
+      state.magicEndAt = 0;
+      const context = els.magic.getContext("2d");
+      context.clearRect(0, 0, els.magic.width, els.magic.height);
     }
 
-    function launchFireworks() {
-      stopFireworks();
-      const canvas = els.fireworks;
+    function launchMagic() {
+      stopMagic();
+      const canvas = els.magic;
       const context = canvas.getContext("2d");
       const rect = canvas.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
-      const colors = ["#138a4d", "#176ec9", "#f0b429", "#d64545", "#7c3aed", "#0f9f9f"];
-      const emojis = ["🎉", "✨", "🥳", "🌟", "💥"];
+      const colors = ["#f8c945", "#fff3a3", "#7c3aed", "#176ec9", "#18a058", "#ffffff"];
+      const spells = ["✨", "⚡", "✦", "✧", "★"];
       const particles = [];
-      const emojiParticles = [];
+      const glyphs = [];
+      const strokes = [];
+      const magicStartAt = performance.now();
 
       canvas.width = Math.max(1, Math.floor(rect.width * scale));
       canvas.height = Math.max(1, Math.floor(rect.height * scale));
       context.setTransform(scale, 0, 0, scale, 0, 0);
 
-      function burst(x, y, count) {
+      function drawStar(x, y, radius, alpha) {
+        context.save();
+        context.globalAlpha = alpha;
+        context.fillStyle = "#fff7bd";
+        context.beginPath();
+        for (let i = 0; i < 8; i += 1) {
+          const angle = -Math.PI / 2 + (Math.PI * i) / 4;
+          const length = i % 2 === 0 ? radius : radius * 0.36;
+          const px = x + Math.cos(angle) * length;
+          const py = y + Math.sin(angle) * length;
+          if (i === 0) context.moveTo(px, py);
+          else context.lineTo(px, py);
+        }
+        context.closePath();
+        context.fill();
+        context.restore();
+      }
+
+      function wandPath(progress, wave) {
+        const width = rect.width;
+        const height = rect.height;
+        const centerX = width * 0.5;
+        const centerY = height * 0.53;
+        const arc = Math.sin(progress * Math.PI * 2 + wave * 0.7);
+        const lift = Math.sin(progress * Math.PI + wave * 0.4);
+        return {
+          x: centerX + arc * width * 0.28,
+          y: centerY - lift * height * 0.28 + Math.cos(progress * Math.PI * 3) * 18,
+          angle: -0.62 + arc * 0.55,
+        };
+      }
+
+      function castWave(delay, wave) {
+        strokes.push({ delay, wave, life: 0, maxLife: 92 });
+      }
+
+      function drawWand(now) {
+        const wandProgress = Math.min(1, Math.max(0, (now - magicStartAt) / 1800));
+        const wand = wandPath(wandProgress, 0.5);
+        context.save();
+        context.globalAlpha = 1;
+        context.globalCompositeOperation = "source-over";
+        context.translate(wand.x, wand.y);
+        context.rotate(wand.angle);
+        context.lineCap = "round";
+        context.lineWidth = 11;
+        context.strokeStyle = "rgba(24, 33, 31, 0.18)";
+        context.beginPath();
+        context.moveTo(-78, 27);
+        context.lineTo(24, -16);
+        context.stroke();
+        context.lineWidth = 9;
+        context.strokeStyle = "#5b351c";
+        context.beginPath();
+        context.moveTo(-76, 24);
+        context.lineTo(22, -18);
+        context.stroke();
+        context.lineWidth = 3;
+        context.strokeStyle = "#d9a24b";
+        context.beginPath();
+        context.moveTo(-42, 10);
+        context.lineTo(-8, -5);
+        context.stroke();
+        context.shadowBlur = 24;
+        context.shadowColor = "#f8c945";
+        context.fillStyle = "#fff3a3";
+        context.beginPath();
+        context.arc(25, -19, 6, 0, Math.PI * 2);
+        context.fill();
+        context.restore();
+      }
+
+      function sparkle(x, y, count, force = 1) {
         for (let i = 0; i < count; i += 1) {
-          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.2;
-          const speed = 2.2 + Math.random() * 4.2;
+          const angle = Math.random() * Math.PI * 2;
+          const speed = (1.2 + Math.random() * 4.4) * force;
           particles.push({
-            x,
-            y,
+            x: x + (Math.random() - 0.5) * 18,
+            y: y + (Math.random() - 0.5) * 18,
             vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed - Math.random() * 1.1,
-            radius: 2 + Math.random() * 3.2,
+            vy: Math.sin(angle) * speed - Math.random() * 1.4,
+            radius: 1.2 + Math.random() * 3.6,
             life: 1,
-            decay: 0.012 + Math.random() * 0.016,
+            decay: 0.01 + Math.random() * 0.018,
             color: colors[Math.floor(Math.random() * colors.length)],
+            star: Math.random() > 0.56,
           });
         }
 
-        const emojiCount = Math.max(5, Math.floor(count / 8));
-        for (let i = 0; i < emojiCount; i += 1) {
+        for (let i = 0; i < Math.max(2, Math.floor(count / 12)); i += 1) {
           const angle = Math.random() * Math.PI * 2;
-          const speed = 1.4 + Math.random() * 3.2;
-          emojiParticles.push({
-            emoji: emojis[Math.floor(Math.random() * emojis.length)],
+          const speed = 1 + Math.random() * 2.6;
+          glyphs.push({
+            glyph: spells[Math.floor(Math.random() * spells.length)],
             x: x + (Math.random() - 0.5) * 24,
             y: y + (Math.random() - 0.5) * 24,
             vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed - 1.2,
-            size: 20 + Math.random() * 18,
+            vy: Math.sin(angle) * speed - 0.8,
+            size: 18 + Math.random() * 18,
             rotation: (Math.random() - 0.5) * 0.8,
-            spin: (Math.random() - 0.5) * 0.08,
+            spin: (Math.random() - 0.5) * 0.06,
             life: 1,
-            decay: 0.01 + Math.random() * 0.012,
+            decay: 0.008 + Math.random() * 0.012,
           });
         }
       }
 
-      burst(rect.width * 0.5, rect.height * 0.5, 62);
-      burst(rect.width * 0.28, rect.height * 0.42, 42);
-      burst(rect.width * 0.72, rect.height * 0.42, 42);
-      window.setTimeout(() => burst(rect.width * 0.5, rect.height * 0.26, 54), 220);
-      window.setTimeout(() => burst(rect.width * 0.34, rect.height * 0.68, 40), 460);
-      window.setTimeout(() => burst(rect.width * 0.66, rect.height * 0.68, 40), 620);
+      castWave(0, 0);
+      castWave(18, 1);
+      castWave(36, 2);
+      window.setTimeout(() => sparkle(rect.width * 0.5, rect.height * 0.5, 64, 1.25), 120);
+      window.setTimeout(() => sparkle(rect.width * 0.34, rect.height * 0.36, 42, 1.05), 420);
+      window.setTimeout(() => sparkle(rect.width * 0.66, rect.height * 0.36, 42, 1.05), 620);
+      window.setTimeout(() => sparkle(rect.width * 0.5, rect.height * 0.24, 58, 1.15), 900);
 
-      state.fireworksEndAt = performance.now() + 2800;
+      state.magicEndAt = performance.now() + 3000;
 
       function draw(now) {
         context.clearRect(0, 0, rect.width, rect.height);
+        drawWand(now);
         context.globalCompositeOperation = "lighter";
+
+        for (let i = strokes.length - 1; i >= 0; i -= 1) {
+          const stroke = strokes[i];
+          stroke.life += 1;
+          const progress = Math.max(0, (stroke.life - stroke.delay) / stroke.maxLife);
+          if (progress <= 0) continue;
+
+          const tip = wandPath(Math.min(1, progress), stroke.wave);
+          const tail = wandPath(Math.max(0, progress - 0.16), stroke.wave);
+          const alpha = Math.max(0, 1 - progress);
+
+          context.save();
+          context.globalAlpha = alpha;
+          context.lineWidth = 8;
+          context.lineCap = "round";
+          context.strokeStyle = "#fff2a3";
+          context.shadowBlur = 22;
+          context.shadowColor = "#f8c945";
+          context.beginPath();
+          context.moveTo(tail.x, tail.y);
+          context.quadraticCurveTo(
+            (tail.x + tip.x) / 2,
+            Math.min(tail.y, tip.y) - rect.height * 0.16,
+            tip.x,
+            tip.y
+          );
+          context.stroke();
+          context.restore();
+
+          if (stroke.life % 3 === 0) sparkle(tip.x, tip.y, 4, 0.6);
+
+          if (progress >= 1) {
+            sparkle(tip.x, tip.y, 34, 1.05);
+            strokes.splice(i, 1);
+          }
+        }
 
         for (let i = particles.length - 1; i >= 0; i -= 1) {
           const particle = particles[i];
           particle.x += particle.vx;
           particle.y += particle.vy;
-          particle.vy += 0.055;
+          particle.vy += 0.035;
           particle.vx *= 0.992;
           particle.life -= particle.decay;
 
@@ -629,22 +741,26 @@
 
           context.globalAlpha = Math.max(0, particle.life);
           context.fillStyle = particle.color;
-          context.beginPath();
-          context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-          context.fill();
+          if (particle.star) {
+            drawStar(particle.x, particle.y, particle.radius * 2.8, particle.life);
+          } else {
+            context.beginPath();
+            context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+            context.fill();
+          }
         }
 
-        for (let i = emojiParticles.length - 1; i >= 0; i -= 1) {
-          const particle = emojiParticles[i];
+        for (let i = glyphs.length - 1; i >= 0; i -= 1) {
+          const particle = glyphs[i];
           particle.x += particle.vx;
           particle.y += particle.vy;
-          particle.vy += 0.035;
+          particle.vy += 0.018;
           particle.vx *= 0.992;
           particle.rotation += particle.spin;
           particle.life -= particle.decay;
 
           if (particle.life <= 0) {
-            emojiParticles.splice(i, 1);
+            glyphs.splice(i, 1);
             continue;
           }
 
@@ -655,21 +771,22 @@
           context.font = `${particle.size}px system-ui, sans-serif`;
           context.textAlign = "center";
           context.textBaseline = "middle";
-          context.fillText(particle.emoji, 0, 0);
+          context.fillText(particle.glyph, 0, 0);
           context.restore();
         }
 
         context.globalAlpha = 1;
         context.globalCompositeOperation = "source-over";
+        drawWand(now);
 
-        if (now < state.fireworksEndAt || particles.length > 0 || emojiParticles.length > 0) {
-          state.fireworksRaf = requestAnimationFrame(draw);
+        if (now < state.magicEndAt || particles.length > 0 || glyphs.length > 0 || strokes.length > 0) {
+          state.magicRaf = requestAnimationFrame(draw);
         } else {
-          stopFireworks();
+          stopMagic();
         }
       }
 
-      state.fireworksRaf = requestAnimationFrame(draw);
+      state.magicRaf = requestAnimationFrame(draw);
     }
 
     function renderProgress() {
@@ -750,7 +867,7 @@
         els.cueWord.classList.add("visible");
         els.cueWrap.style.setProperty("--cue-color", "var(--ink)");
         els.cueWrap.style.setProperty("--cue-soft", "#efede6");
-        launchFireworks();
+        launchMagic();
         render();
         return;
       }
@@ -762,7 +879,7 @@
     function start() {
       const { minutes } = settings();
       if (!state.running) {
-        stopFireworks();
+        stopMagic();
         state.durationMs = minutes * 60 * 1000;
         state.remainingMs = state.remainingMs > 0 && state.remainingMs !== state.durationMs
           ? state.remainingMs
@@ -791,7 +908,7 @@
 
     function reset() {
       cancelAnimationFrame(state.raf);
-      stopFireworks();
+      stopMagic();
       const { minutes } = settings();
       state.running = false;
       state.paused = false;
@@ -822,7 +939,7 @@
       const tag = document.activeElement?.tagName;
       const isEditing = tag === "INPUT" || tag === "TEXTAREA";
       if (event.code === "KeyF") {
-        launchFireworks();
+        launchMagic();
       }
       if (event.code === "Space" && !isEditing) {
         event.preventDefault();
