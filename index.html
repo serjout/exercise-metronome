@@ -372,7 +372,7 @@
         </div>
         <div class="field">
           <label for="minutes">Минут</label>
-          <input id="minutes" type="number" min="1" max="60" step="1" value="7">
+          <input id="minutes" type="number" min="1" max="240" step="1" value="7">
         </div>
       </div>
 
@@ -462,7 +462,7 @@
       return {
         bpm: Math.max(30, Math.min(180, numberFrom(els.bpm, 60))),
         bars: Math.max(1, Math.min(32, numberFrom(els.bars, 7))),
-        minutes: Math.max(1, Math.min(60, numberFrom(els.minutes, 7))),
+        minutes: Math.max(1, Math.min(240, numberFrom(els.minutes, 7))),
         pauseAdd: Math.max(0, Math.min(120, numberFrom(els.pauseAdd, 7))),
       };
     }
