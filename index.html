@@ -372,7 +372,7 @@
         </div>
         <div class="field">
           <label for="minutes">Минут</label>
-          <input id="minutes" type="number" min="1" max="240" step="1" value="7">
+          <input id="minutes" type="number" min="1" step="1" value="7">
         </div>
       </div>
 
@@ -468,7 +468,7 @@
       return {
         bpm: clamp(numberFrom(els.bpm, 60), 30, 180, 60),
         bars: clamp(numberFrom(els.bars, 7), 1, 32, 7),
-        minutes: clamp(numberFrom(els.minutes, 7), 1, 240, 7),
+        minutes: Math.max(1, numberFrom(els.minutes, 7)),
         pauseAdd: clamp(numberFrom(els.pauseAdd, 7), 0, 120, 7),
       };
     }
@@ -486,7 +486,7 @@
         const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}");
         if (Number.isFinite(saved.bpm)) els.bpm.value = clamp(saved.bpm, 30, 180, 60);
         if (Number.isFinite(saved.bars)) els.bars.value = clamp(saved.bars, 1, 32, 7);
-        if (Number.isFinite(saved.minutes)) els.minutes.value = clamp(saved.minutes, 1, 240, 7);
+        if (Number.isFinite(saved.minutes)) els.minutes.value = Math.max(1, saved.minutes);
         if (Number.isFinite(saved.pauseAdd)) els.pauseAdd.value = clamp(saved.pauseAdd, 0, 120, 7);
       } catch (error) {
         // Ignore malformed saved data and keep the defaults.
