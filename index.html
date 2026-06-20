@@ -453,6 +453,12 @@
       audio: null,
     };
 
+    const SETTINGS_STORAGE_KEY = "exercise-metronome-settings";
+
+    function clamp(value, min, max, fallback) {
+      return Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+    }
+
     function numberFrom(input, fallback) {
       const value = Number.parseInt(input.value, 10);
       return Number.isFinite(value) ? value : fallback;
@@ -460,11 +466,31 @@
 
     function settings() {
       return {
-        bpm: Math.max(30, Math.min(180, numberFrom(els.bpm, 60))),
-        bars: Math.max(1, Math.min(32, numberFrom(els.bars, 7))),
-        minutes: Math.max(1, Math.min(240, numberFrom(els.minutes, 7))),
-        pauseAdd: Math.max(0, Math.min(120, numberFrom(els.pauseAdd, 7))),
+        bpm: clamp(numberFrom(els.bpm, 60), 30, 180, 60),
+        bars: clamp(numberFrom(els.bars, 7), 1, 32, 7),
+        minutes: clamp(numberFrom(els.minutes, 7), 1, 240, 7),
+        pauseAdd: clamp(numberFrom(els.pauseAdd, 7), 0, 120, 7),
       };
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings()));
+      } catch (error) {
+        // Private browsing or storage limits should not break the timer.
+      }
+    }
+
+    function loadSettings() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}");
+        if (Number.isFinite(saved.bpm)) els.bpm.value = clamp(saved.bpm, 30, 180, 60);
+        if (Number.isFinite(saved.bars)) els.bars.value = clamp(saved.bars, 1, 32, 7);
+        if (Number.isFinite(saved.minutes)) els.minutes.value = clamp(saved.minutes, 1, 240, 7);
+        if (Number.isFinite(saved.pauseAdd)) els.pauseAdd.value = clamp(saved.pauseAdd, 0, 120, 7);
+      } catch (error) {
+        // Ignore malformed saved data and keep the defaults.
+      }
     }
 
     function formatTime(ms) {
@@ -927,6 +953,7 @@
 
     [els.bpm, els.bars, els.minutes, els.pauseAdd].forEach((input) => {
       input.addEventListener("input", () => {
+        saveSettings();
         if (!state.running) {
           reset();
         } else {
@@ -947,6 +974,7 @@
       }
     });
 
+    loadSettings();
     reset();
 
     function updateNetworkStatus() {
