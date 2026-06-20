@@ -1,4 +1,4 @@
-const CACHE_NAME = "exercise-metronome-v5";
+const CACHE_NAME = "exercise-metronome-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -25,6 +25,12 @@ self.addEventListener("activate", (event) => {
       ))
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {

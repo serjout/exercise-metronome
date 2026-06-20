@@ -454,6 +454,7 @@
     };
 
     const SETTINGS_STORAGE_KEY = "exercise-metronome-settings";
+    const APP_VERSION = "v6";
 
     function clamp(value, min, max, fallback) {
       return Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
@@ -981,13 +982,31 @@
       render();
     }
 
+    function reloadForAppUpdate() {
+      const reloadKey = "exercise-metronome-reload-version";
+      if (sessionStorage.getItem(reloadKey) === APP_VERSION) return;
+      sessionStorage.setItem(reloadKey, APP_VERSION);
+      window.location.reload();
+    }
+
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").then(() => {
-          if (!navigator.serviceWorker.controller && !sessionStorage.getItem("sw-reload")) {
-            sessionStorage.setItem("sw-reload", "1");
-            window.location.reload();
+        navigator.serviceWorker.register("./sw.js").then((registration) => {
+          navigator.serviceWorker.addEventListener("controllerchange", reloadForAppUpdate);
+
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            registration.waiting.postMessage({ type: "SKIP_WAITING" });
           }
+
+          registration.addEventListener("updatefound", () => {
+            const worker = registration.installing;
+            if (!worker) return;
+            worker.addEventListener("statechange", () => {
+              if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                worker.postMessage({ type: "SKIP_WAITING" });
+              }
+            });
+          });
         }).catch(() => {});
       });
     }
